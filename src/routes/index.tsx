@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Leaf,
   Flame,
@@ -8,12 +8,13 @@ import {
   Sparkles,
   HeartHandshake,
   Instagram,
-  Youtube,
   MessageCircle,
   MapPin,
   Mail,
   Calendar,
   ArrowRight,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -38,11 +39,13 @@ export const Route = createFileRoute("/")({
 
 // ==== Platzhalter ====
 const BSPORT_COMPANY_ID = 5637;
-const BSPORTS_LINK = "[BSPORTS_BUCHUNGSLINK_HIER_EINFÜGEN]";
-const INSTAGRAM_LINK = "[INSTAGRAM_LINK_HIER_EINFÜGEN]";
-const YOUTUBE_LINK = "[YOUTUBE_LINK_HIER_EINFÜGEN]";
+const BSPORTS_LINK = "https://backoffice.bsport.io/m/YogaLounge%20Erfurt/5637/";
+const INSTAGRAM_LINK = "https://instagram.com/yogalounge_erfurt";
+const FACEBOOK_LINK = "https://www.facebook.com/YogaLoungeErfurt/";
 const WHATSAPP_LINK = "https://whatsapp.com/channel/0029VazOMXAL7UVYgqos6V1G";
-const EMAIL = "[EMAIL_HIER_EINFÜGEN]";
+const EMAIL = "kathrin@seemannsyoga.de";
+const STUDIO_IMAGE = "https://www.seemannsyoga.de/media/20230427_114941.jpg";
+const STUDIO_DETAIL_IMAGE = "https://www.seemannsyoga.de/media/20230427_115127.jpg";
 
 const nav = [
   { href: "#start", label: "Start" },
@@ -107,10 +110,9 @@ function CTA({
     variant === "primary"
       ? "text-primary-foreground shadow-[0_14px_36px_-14px_oklch(0.72_0.16_55/0.65)] hover:-translate-y-0.5 hover:shadow-[0_20px_44px_-14px_oklch(0.72_0.16_55/0.75)]"
       : variant === "dark"
-      ? "bg-foreground text-background hover:bg-foreground/90"
-      : "border border-foreground/15 bg-background/70 text-foreground backdrop-blur hover:bg-background";
-  const bg =
-    variant === "primary" ? { background: "var(--gradient-warm)" } : undefined;
+        ? "bg-foreground text-background hover:bg-foreground/90"
+        : "border border-foreground/15 bg-background/70 text-foreground backdrop-blur hover:bg-background";
+  const bg = variant === "primary" ? { background: "var(--gradient-warm)" } : undefined;
   return (
     <a
       href={href}
@@ -121,6 +123,232 @@ function CTA({
     >
       {children}
     </a>
+  );
+}
+
+// ---------- ruhiger, lokal erzeugter Mantra-Klang ----------
+
+function MantraControl({ compact = false }: { compact?: boolean }) {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<{
+    context: AudioContext;
+    master: GainNode;
+    oscillators: OscillatorNode[];
+  } | null>(null);
+
+  const stop = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const now = audio.context.currentTime;
+    audio.master.gain.cancelScheduledValues(now);
+    audio.master.gain.setValueAtTime(audio.master.gain.value, now);
+    audio.master.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+    window.setTimeout(() => {
+      audio.oscillators.forEach((oscillator) => oscillator.stop());
+      void audio.context.close();
+    }, 1300);
+    audioRef.current = null;
+    setPlaying(false);
+  };
+
+  const start = async () => {
+    const context = new AudioContext();
+    const master = context.createGain();
+    const filter = context.createBiquadFilter();
+    const frequencies = [136.1, 204.15, 272.2];
+
+    filter.type = "lowpass";
+    filter.frequency.value = 720;
+    filter.Q.value = 0.7;
+    master.gain.setValueAtTime(0.0001, context.currentTime);
+    master.gain.exponentialRampToValueAtTime(0.045, context.currentTime + 2.4);
+    filter.connect(master);
+    master.connect(context.destination);
+
+    const oscillators = frequencies.map((frequency, index) => {
+      const oscillator = context.createOscillator();
+      const voice = context.createGain();
+      oscillator.type = index === 0 ? "sine" : "triangle";
+      oscillator.frequency.value = frequency;
+      oscillator.detune.value = index === 1 ? -4 : index === 2 ? 3 : 0;
+      voice.gain.value = index === 0 ? 0.72 : 0.12;
+      oscillator.connect(voice);
+      voice.connect(filter);
+      oscillator.start();
+      return oscillator;
+    });
+
+    if (context.state === "suspended") await context.resume();
+    audioRef.current = { context, master, oscillators };
+    setPlaying(true);
+  };
+
+  useEffect(() => () => stop(), []);
+
+  return (
+    <button
+      type="button"
+      aria-pressed={playing}
+      aria-label={playing ? "Mantra-Klang ausschalten" : "Mantra-Klang einschalten"}
+      onClick={() => (playing ? stop() : void start())}
+      className={`group inline-flex items-center rounded-full border border-white/20 bg-black/20 text-stone-50 shadow-lg backdrop-blur-md transition hover:bg-black/30 ${
+        compact ? "gap-2 px-3 py-2 text-xs" : "gap-3 px-4 py-3 text-sm"
+      }`}
+    >
+      <span className="relative grid h-8 w-8 place-items-center rounded-full bg-white/12">
+        {playing ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+        {playing && (
+          <span className="absolute inset-0 animate-ping rounded-full border border-white/30" />
+        )}
+      </span>
+      <span className="text-left leading-tight">
+        <span className="block font-medium">Mantra {playing ? "an" : "aus"}</span>
+        {!compact && (
+          <span className="block text-[11px] text-stone-200/70">
+            {playing ? "Klangraum genießen" : "zum Ankommen einschalten"}
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
+
+// ---------- Mini-Guide für neue Besucher:innen ----------
+
+const guideQuestions = [
+  "Ich bin Anfänger:in",
+  "Was muss ich mitbringen?",
+  "Wie buche ich?",
+  "Zahlt meine Krankenkasse?",
+];
+
+function answerGuideQuestion(question: string) {
+  const value = question.toLocaleLowerCase("de");
+
+  if (/anf[aä]ng|neu|schnupper|erstes mal/.test(value)) {
+    return "Du brauchst keine Vorerfahrung. Such dir im Stundenplan eine sanfte Stunde oder einen Anfänger:innen-Kurs aus. Wenn du unsicher bist, schreib uns kurz – wir helfen dir gern bei der Auswahl.";
+  }
+  if (/mitbringen|matte|kleidung|anziehen|ausr[uü]stung/.test(value)) {
+    return "Bequeme Kleidung reicht. Matten und Hilfsmittel sind im Studio vorhanden, Getränke stehen ebenfalls bereit. Komm am besten etwa 10 bis 15 Minuten vor Beginn an.";
+  }
+  if (/buch|anmeld|reserv|platz/.test(value)) {
+    return "Du buchst direkt über bSport. Im Stundenplan siehst du aktuelle Termine und freie Plätze; wähle dort einfach deine gewünschte Stunde aus.";
+  }
+  if (/krankenkasse|kasse|zuschuss|pr[aä]vention/.test(value)) {
+    return "Die YogaLounge bietet zertifizierte Präventionskurse an. Ob und in welcher Höhe deine Krankenkasse unterstützt, hängt von deinem Tarif und dem gewählten Kurs ab. Frag uns oder deine Kasse vor der Buchung kurz danach.";
+  }
+  if (/preis|kost|karte|abo|zahlen/.test(value)) {
+    return "Die aktuellen Preise, Karten und Angebote findest du direkt bei bSport. So erhältst du immer den gültigen Stand und kannst anschließend sofort buchen.";
+  }
+  if (/heute|wann|uhr|kursplan|stundenplan|termin/.test(value)) {
+    return "Der eingebundene bSport-Stundenplan zeigt dir live alle aktuellen Termine und freien Plätze. Nutze unten den Button „Zum Live-Stundenplan“.";
+  }
+  if (/anfahrt|adresse|park|bahn|fahrrad|wo/.test(value)) {
+    return "Du findest die YogaLounge in der Neuwerkstraße 31 in Erfurt. Parkmöglichkeiten gibt es in der Nähe; Fahrräder können sicher im Innenhof abgestellt werden.";
+  }
+  if (/kontakt|mail|telefon|whatsapp|erreich/.test(value)) {
+    return `Du erreichst uns per E-Mail an ${EMAIL} oder über den WhatsApp-Kanal. Für eine persönliche Kursberatung kannst du uns dort direkt schreiben.`;
+  }
+
+  return "Dazu habe ich noch keine verlässliche Antwort hinterlegt. Schreib uns bitte kurz per WhatsApp oder E-Mail – dann bekommst du eine persönliche Antwort aus der YogaLounge.";
+}
+
+function NewHereGuide() {
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState(
+    "Hallo, schön, dass du da bist. Was möchtest du vor deinem ersten Besuch wissen?",
+  );
+
+  const ask = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    setQuestion("");
+    setAnswer(answerGuideQuestion(trimmed));
+  };
+
+  return (
+    <div className="mt-12 overflow-hidden rounded-[2rem] border border-foreground/10 bg-primary text-primary-foreground shadow-[0_30px_80px_-45px_oklch(0.28_0.07_46/0.7)]">
+      <div className="grid md:grid-cols-[0.72fr_1.28fr]">
+        <div className="border-b border-white/10 p-7 md:border-r md:border-b-0 md:p-8">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-white/10">
+              <MessageCircle className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="font-serif text-xl italic">Neu hier?</p>
+              <p className="text-xs text-primary-foreground/65">Frag den YogaLounge-Guide</p>
+            </div>
+          </div>
+          <p className="mt-6 text-sm leading-relaxed text-primary-foreground/75">
+            Antworten aus unseren Studio-Informationen. Aktuelle Termine und Preise kommen direkt
+            von bSport.
+          </p>
+          <p className="mt-4 text-[11px] leading-relaxed text-primary-foreground/50">
+            Deine Frage bleibt in deinem Browser und wird nicht gespeichert.
+          </p>
+        </div>
+
+        <div className="bg-black/[0.08] p-7 md:p-8">
+          <div
+            aria-live="polite"
+            className="min-h-24 rounded-2xl bg-white/[0.09] p-5 text-sm leading-relaxed"
+          >
+            {answer}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {guideQuestions.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => ask(item)}
+                className="rounded-full border border-white/15 bg-white/[0.07] px-3 py-2 text-xs transition hover:bg-white/[0.14]"
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
+          <form
+            className="mt-4 flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              ask(question);
+            }}
+          >
+            <input
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              placeholder="Deine Frage …"
+              aria-label="Frage an den YogaLounge-Guide"
+              className="min-w-0 flex-1 rounded-full border border-white/15 bg-white/10 px-4 py-3 text-sm text-white outline-none placeholder:text-white/45 focus:border-white/35"
+            />
+            <button
+              type="submit"
+              aria-label="Frage stellen"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-background text-foreground transition hover:scale-105"
+            >
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </form>
+
+          <div className="mt-4 flex flex-wrap gap-3 text-xs">
+            <a href="#stundenplan" className="underline decoration-white/30 underline-offset-4">
+              Zum Live-Stundenplan
+            </a>
+            <a
+              href={WHATSAPP_LINK}
+              target="_blank"
+              rel="noreferrer"
+              className="underline decoration-white/30 underline-offset-4"
+            >
+              Persönlich über WhatsApp
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -223,25 +451,18 @@ function Index() {
       </div>
 
       {/* ============== HERO ============== */}
-      <section
-        id="start"
-        className="relative overflow-hidden px-6 pt-20 pb-24 sm:pt-28 sm:pb-32"
-      >
-        <div
-          className="absolute inset-0 -z-10"
-          style={{ background: "var(--gradient-cream)" }}
-        />
+      <section id="start" className="relative overflow-hidden px-6 pb-24 pt-16 sm:pb-32 sm:pt-24">
+        <div className="absolute inset-0 -z-10" style={{ background: "var(--gradient-cream)" }} />
         <div
           aria-hidden
-          className="absolute -right-40 -top-40 -z-10 h-[560px] w-[560px] rounded-full opacity-70 blur-3xl"
-          style={{ background: "var(--gradient-warm)" }}
+          className="absolute -right-40 -top-40 -z-10 h-[560px] w-[560px] rounded-full opacity-25 blur-3xl"
+          style={{ background: "var(--glow-earth)" }}
         />
         <div
           aria-hidden
           className="absolute -left-32 top-1/2 -z-10 h-[420px] w-[420px] rounded-full opacity-50 blur-3xl"
           style={{
-            background:
-              "radial-gradient(circle, oklch(0.92 0.13 88 / 0.8), transparent 70%)",
+            background: "radial-gradient(circle, oklch(0.74 0.07 65 / 0.35), transparent 70%)",
           }}
         />
 
@@ -263,7 +484,7 @@ function Index() {
               className="mt-8 font-serif text-[3rem] leading-[1.02] tracking-tight sm:text-6xl md:text-[4.5rem]"
               style={{ fontWeight: 400 }}
             >
-              Yoga,{" "}
+              Ankommen.{" "}
               <span
                 className="italic"
                 style={{
@@ -273,14 +494,13 @@ function Index() {
                   color: "transparent",
                 }}
               >
-                das dich abholt.
+                Durchatmen.
               </span>
             </h1>
 
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-foreground/70">
-              Ruhige Kurse, klare Orientierung und ein Ort zum Ankommen –
-              mitten in Erfurt. Du musst nichts können. Du darfst einfach
-              anfangen.
+              Ein warmer Raum mitten in Erfurt. Für Bewegung, Stille und den Moment, in dem du
+              wieder bei dir ankommst. Du musst nichts können. Du darfst einfach da sein.
             </p>
 
             <div className="mt-9 flex flex-wrap gap-3">
@@ -306,31 +526,34 @@ function Index() {
             </div>
           </div>
 
-          {/* Rechte Kachel – ruhiges, atmosphärisches Farbfeld */}
+          {/* Rechte Kachel – Studio, Licht und ein ruhiger Klangraum */}
           <div className="relative">
-            <div
-              className="relative aspect-[4/5] w-full overflow-hidden rounded-[2rem] shadow-[0_40px_100px_-40px_oklch(0.55_0.15_55/0.5)]"
-              style={{
-                background:
-                  "linear-gradient(160deg, oklch(0.96 0.05 82) 0%, oklch(0.86 0.13 62) 60%, oklch(0.72 0.16 55) 100%)",
-              }}
-            >
+            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[2.25rem] bg-stone-900 shadow-[0_45px_110px_-45px_oklch(0.25_0.06_45/0.75)]">
+              <img
+                src={STUDIO_IMAGE}
+                alt="Der echte Yogaraum der YogaLounge Erfurt"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-stone-950/10 via-stone-950/5 to-stone-950/80" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_15%,transparent_10%,rgba(35,18,8,0.2)_70%)]" />
               <div className="absolute inset-0 flex flex-col justify-between p-8">
                 <div className="flex items-center justify-between">
-                  <span className="rounded-full bg-background/85 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-foreground/70 backdrop-blur">
-                    Studio
+                  <span className="rounded-full border border-white/15 bg-black/20 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-stone-100 backdrop-blur">
+                    YogaLounge
                   </span>
-                  <span className="rounded-full bg-foreground/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-foreground/70 backdrop-blur">
+                  <span className="rounded-full border border-white/15 bg-black/20 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-stone-100 backdrop-blur">
                     Erfurt
                   </span>
                 </div>
                 <div>
-                  <p className="font-serif text-3xl italic text-foreground/85">
-                    Ein Ort<br />zum Ankommen.
+                  <MantraControl />
+                  <p className="mt-6 font-serif text-3xl italic text-stone-50">
+                    Lass den Tag
+                    <br />
+                    für einen Moment los.
                   </p>
-                  <p className="mt-3 max-w-xs text-sm text-foreground/70">
-                    Warm, ruhig, freundlich begleitet – Yoga, Meditation und
-                    achtsame Bewegung.
+                  <p className="mt-3 max-w-xs text-sm leading-relaxed text-stone-200/80">
+                    Atme ein. Atme aus. Alles Weitere darf warten.
                   </p>
                 </div>
               </div>
@@ -352,9 +575,7 @@ function Index() {
                   <div className="text-[11px] uppercase tracking-widest text-foreground/50">
                     Live
                   </div>
-                  <div className="truncate text-sm font-medium">
-                    Aktuelle Kurse & freie Plätze
-                  </div>
+                  <div className="truncate text-sm font-medium">Aktuelle Kurse & freie Plätze</div>
                 </div>
               </div>
             </a>
@@ -371,18 +592,20 @@ function Index() {
                 Neu hier?
               </span>
               <h2 className="mt-4 font-serif text-4xl leading-[1.05] md:text-5xl">
-                Such dir den Kurs,<br />
+                Such dir den Kurs,
+                <br />
                 <span className="italic">der heute zu dir passt.</span>
               </h2>
             </div>
             <p className="max-w-md text-lg leading-relaxed text-foreground/70">
-              In der YogaLounge findest du Yoga, Meditation, Entspannung und
-              achtsame Bewegung – ohne Vergleich, ohne komplizierte Hürden.
-              Wähle nach Gefühl, nicht nach Stil.
+              In der YogaLounge findest du Yoga, Meditation, Entspannung und achtsame Bewegung –
+              ohne Vergleich, ohne komplizierte Hürden. Wähle nach Gefühl, nicht nach Stil.
             </p>
           </div>
 
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <NewHereGuide />
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {needs.map(({ icon: Icon, title, desc }) => (
               <a
                 key={title}
@@ -427,12 +650,11 @@ function Index() {
               Stundenplan & Buchung
             </span>
             <h2 className="mt-4 font-serif text-4xl leading-tight md:text-5xl">
-              Alle Zeiten,{" "}
-              <span className="italic">freien Plätze und Preise.</span>
+              Alle Zeiten, <span className="italic">freien Plätze und Preise.</span>
             </h2>
             <p className="mt-4 text-foreground/70">
-              Wähle deine Stunde und buche direkt hier. Rabattcodes und Events
-              laufen ebenfalls über das Buchungssystem.
+              Wähle deine Stunde und buche direkt hier. Rabattcodes und Events laufen ebenfalls über
+              das Buchungssystem.
             </p>
           </div>
 
@@ -473,27 +695,27 @@ function Index() {
 
           <div className="grid gap-4 md:grid-cols-6 md:grid-rows-2">
             {/* großes Feature */}
-            <div
-              className="relative overflow-hidden rounded-3xl p-8 text-primary-foreground md:col-span-4 md:row-span-2"
-              style={{ background: "var(--gradient-warm)" }}
-            >
-              <div
-                aria-hidden
-                className="absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-white/10 blur-2xl"
+            <div className="relative overflow-hidden rounded-3xl p-8 text-primary-foreground md:col-span-4 md:row-span-2">
+              <img
+                src={STUDIO_DETAIL_IMAGE}
+                alt="Einblick in die Räume der YogaLounge Erfurt"
+                loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover"
               />
-              <span className="text-[11px] uppercase tracking-[0.25em] text-primary-foreground/80">
+              <div className="absolute inset-0 bg-gradient-to-br from-stone-950/85 via-stone-900/68 to-stone-800/35" />
+              <span className="relative text-[11px] uppercase tracking-[0.25em] text-stone-100/80">
                 Kern
               </span>
-              <h3 className="mt-3 font-serif text-4xl leading-tight md:text-5xl">
-                Yoga-Kurse<br />
+              <h3 className="relative mt-3 font-serif text-4xl leading-tight text-stone-50 md:text-5xl">
+                Yoga-Kurse
+                <br />
                 <span className="italic">für Ruhe, Kraft & einen Moment bei dir.</span>
               </h3>
-              <p className="mt-5 max-w-md text-primary-foreground/90">
-                Laufende Kurse in unterschiedlichen Stilen und Intensitäten.
-                Such dir aus, was heute passt – im Stundenplan siehst du alles
-                auf einen Blick.
+              <p className="relative mt-5 max-w-md text-stone-100/90">
+                Laufende Kurse in unterschiedlichen Stilen und Intensitäten. Such dir aus, was heute
+                passt – im Stundenplan siehst du alles auf einen Blick.
               </p>
-              <div className="mt-8">
+              <div className="relative mt-8">
                 <a
                   href="#stundenplan"
                   className="inline-flex items-center gap-2 rounded-full bg-background px-6 py-3 text-sm font-medium text-foreground"
@@ -534,9 +756,7 @@ function Index() {
                   <h3 className="mt-2 font-serif text-2xl" style={{ fontWeight: 500 }}>
                     {t.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-foreground/65">
-                    {t.desc}
-                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-foreground/65">{t.desc}</p>
                 </div>
                 <div className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-foreground/70 transition group-hover:text-foreground">
                   Ansehen <ArrowRight className="h-4 w-4" />
@@ -552,8 +772,7 @@ function Index() {
         id="kooperationen"
         className="px-6 py-24"
         style={{
-          background:
-            "linear-gradient(180deg, oklch(0.98 0.015 82), oklch(0.99 0.008 85))",
+          background: "linear-gradient(180deg, oklch(0.98 0.015 82), oklch(0.99 0.008 85))",
         }}
       >
         <div className="mx-auto max-w-6xl">
@@ -563,14 +782,13 @@ function Index() {
                 Haltung
               </span>
               <h2 className="mt-4 font-serif text-4xl leading-[1.05] md:text-5xl">
-                Kooperationen,<br />
-                Rabatte &{" "}
-                <span className="italic">Krankenkasse.</span>
+                Kooperationen,
+                <br />
+                Rabatte & <span className="italic">Krankenkasse.</span>
               </h2>
               <p className="mt-6 max-w-md text-foreground/70">
-                Yoga darf leicht zugänglich sein. Wir arbeiten mit ausgewählten
-                Partner:innen, wenn es menschlich, fachlich und
-                gemeinschaftlich passt.
+                Yoga darf leicht zugänglich sein. Wir arbeiten mit ausgewählten Partner:innen, wenn
+                es menschlich, fachlich und gemeinschaftlich passt.
               </p>
             </div>
 
@@ -596,9 +814,7 @@ function Index() {
                   <h3 className="font-serif text-2xl" style={{ fontWeight: 500 }}>
                     {b.title}
                   </h3>
-                  <p className="mt-2 text-[15px] leading-relaxed text-foreground/70">
-                    {b.body}
-                  </p>
+                  <p className="mt-2 text-[15px] leading-relaxed text-foreground/70">{b.body}</p>
                 </div>
               ))}
             </div>
@@ -613,9 +829,8 @@ function Index() {
             Ein Ort zum Ankommen
           </span>
           <p className="mt-6 font-serif text-3xl leading-[1.25] text-foreground/85 md:text-4xl">
-            <span className="italic">Kein Leistungsdruck.</span> Auch für
-            Anfänger:innen. Warmes Studio, achtsame Begleitung,{" "}
-            <span className="italic">Gemeinschaft ohne Zwang.</span>
+            <span className="italic">Kein Leistungsdruck.</span> Auch für Anfänger:innen. Warmes
+            Studio, achtsame Begleitung, <span className="italic">Gemeinschaft ohne Zwang.</span>
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm uppercase tracking-[0.22em] text-foreground/50">
             <span>ruhig</span>
@@ -640,17 +855,13 @@ function Index() {
             rel="noreferrer"
             className="group relative overflow-hidden rounded-3xl p-8 text-primary-foreground"
             style={{
-              background:
-                "linear-gradient(160deg, oklch(0.7 0.15 155), oklch(0.55 0.14 155))",
+              background: "linear-gradient(160deg, oklch(0.7 0.15 155), oklch(0.55 0.14 155))",
             }}
           >
             <MessageCircle className="h-6 w-6 opacity-90" />
-            <h3 className="mt-6 font-serif text-3xl leading-tight">
-              WhatsApp-Kanal
-            </h3>
+            <h3 className="mt-6 font-serif text-3xl leading-tight">WhatsApp-Kanal</h3>
             <p className="mt-2 text-sm text-primary-foreground/85">
-              Freie Plätze, Neuigkeiten und besondere Termine – direkt aufs
-              Handy.
+              Freie Plätze, Neuigkeiten und besondere Termine – direkt aufs Handy.
             </p>
             <div className="mt-6 inline-flex items-center gap-2 text-sm font-medium">
               Kanal folgen <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
@@ -674,28 +885,30 @@ function Index() {
           </a>
 
           <a
-            href={YOUTUBE_LINK}
+            href={FACEBOOK_LINK}
             target="_blank"
             rel="noreferrer"
             className="group relative overflow-hidden rounded-3xl border border-foreground/8 bg-card p-8"
           >
-            <Youtube className="h-6 w-6 text-foreground/70" />
-            <h3 className="mt-6 font-serif text-3xl leading-tight">YouTube</h3>
+            <span
+              aria-hidden
+              className="grid h-7 w-7 place-items-center rounded-full bg-foreground text-sm font-semibold text-background"
+            >
+              f
+            </span>
+            <h3 className="mt-5 font-serif text-3xl leading-tight">Facebook</h3>
             <p className="mt-2 text-sm text-foreground/65">
-              Kurze Impulse, Meditationen und Rückblicke aus der YogaLounge.
+              Neuigkeiten, Veranstaltungen und Einblicke aus der YogaLounge.
             </p>
             <div className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-foreground/75 transition group-hover:text-foreground">
-              Ansehen <ArrowRight className="h-4 w-4" />
+              Profil öffnen <ArrowRight className="h-4 w-4" />
             </div>
           </a>
         </div>
       </section>
 
       {/* ============== KONTAKT ============== */}
-      <section
-        id="kontakt"
-        className="px-6 pb-32"
-      >
+      <section id="kontakt" className="px-6 pb-32">
         <div
           className="mx-auto max-w-6xl overflow-hidden rounded-[2rem] px-8 py-14 text-primary-foreground sm:px-14 sm:py-20"
           style={{ background: "var(--gradient-warm)" }}
@@ -752,9 +965,23 @@ function Index() {
                 <ArrowRight className="h-4 w-4" />
               </a>
               <div className="mt-2 flex gap-3 text-sm text-primary-foreground/80">
-                <a href={INSTAGRAM_LINK} target="_blank" rel="noreferrer" className="underline-offset-4 hover:underline">Instagram</a>
+                <a
+                  href={INSTAGRAM_LINK}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline-offset-4 hover:underline"
+                >
+                  Instagram
+                </a>
                 <span>·</span>
-                <a href={YOUTUBE_LINK} target="_blank" rel="noreferrer" className="underline-offset-4 hover:underline">YouTube</a>
+                <a
+                  href={FACEBOOK_LINK}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline-offset-4 hover:underline"
+                >
+                  Facebook
+                </a>
               </div>
             </div>
           </div>
@@ -774,9 +1001,15 @@ function Index() {
             © {new Date().getFullYear()} YogaLounge Erfurt
           </div>
           <div className="flex gap-5">
-            <a href="#" className="hover:text-foreground">Impressum</a>
-            <a href="#" className="hover:text-foreground">Datenschutz</a>
-            <a href="#" className="hover:text-foreground">AGB</a>
+            <a href="#" className="hover:text-foreground">
+              Impressum
+            </a>
+            <a href="#" className="hover:text-foreground">
+              Datenschutz
+            </a>
+            <a href="#" className="hover:text-foreground">
+              AGB
+            </a>
           </div>
         </div>
       </footer>
@@ -795,18 +1028,16 @@ function FloatingNav() {
       {/* Desktop – schwebende Pille unten */}
       <nav
         aria-label="Sprungmarken"
-        className="fixed inset-x-0 bottom-6 z-40 mx-auto hidden w-fit lg:block"
+        className="fixed inset-x-0 bottom-3 z-40 mx-auto hidden w-fit lg:block"
       >
-        <div className="flex items-center gap-1 rounded-full border border-foreground/8 bg-background/85 p-1.5 pl-3 shadow-[0_20px_60px_-30px_oklch(0.55_0.15_55/0.5)] backdrop-blur-xl">
-          <span className="pr-2 pl-1 font-serif text-lg italic text-foreground/85">
-            YogaLounge
-          </span>
-          <span className="mx-1 h-5 w-px bg-foreground/10" />
+        <div className="flex items-center gap-0.5 rounded-full border border-foreground/8 bg-background/88 p-1 pl-2.5 shadow-[0_16px_45px_-28px_oklch(0.31_0.07_46/0.65)] backdrop-blur-xl">
+          <span className="px-1.5 font-serif text-sm italic text-foreground/85">YogaLounge</span>
+          <span className="mx-0.5 h-4 w-px bg-foreground/10" />
           {nav.map((n) => (
             <a
               key={n.href}
               href={n.href}
-              className="rounded-full px-3.5 py-2 text-sm text-foreground/75 transition hover:bg-secondary hover:text-foreground"
+              className="rounded-full px-2.5 py-1.5 text-xs text-foreground/75 transition hover:bg-secondary hover:text-foreground"
             >
               {n.label}
             </a>
@@ -815,7 +1046,7 @@ function FloatingNav() {
             href={BSPORTS_LINK}
             target="_blank"
             rel="noreferrer"
-            className="ml-1 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-primary-foreground"
+            className="ml-0.5 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-primary-foreground"
             style={{ background: "var(--gradient-warm)" }}
           >
             Buchen <ArrowRight className="h-3.5 w-3.5" />
@@ -825,18 +1056,15 @@ function FloatingNav() {
 
       {/* Mobile – Buchen-Bar + Menü-Trigger */}
       <div className="fixed inset-x-3 bottom-3 z-40 lg:hidden">
-        <div className="flex items-center gap-2 rounded-full border border-foreground/8 bg-background/95 p-1.5 pl-4 shadow-[0_20px_50px_-20px_oklch(0.55_0.15_55/0.5)] backdrop-blur-xl">
-          <a
-            href="#stundenplan"
-            className="flex-1 truncate text-sm font-medium text-foreground/85"
-          >
+        <div className="flex items-center gap-1.5 rounded-full border border-foreground/8 bg-background/95 p-1 pl-3 shadow-[0_16px_40px_-24px_oklch(0.31_0.07_46/0.65)] backdrop-blur-xl">
+          <a href="#stundenplan" className="flex-1 truncate text-xs font-medium text-foreground/85">
             Stundenplan · Buchen
           </a>
           <a
             href={BSPORTS_LINK}
             target="_blank"
             rel="noreferrer"
-            className="rounded-full px-4 py-2.5 text-sm font-medium text-primary-foreground"
+            className="rounded-full px-3 py-2 text-xs font-medium text-primary-foreground"
             style={{ background: "var(--gradient-warm)" }}
           >
             Kurs buchen
@@ -844,7 +1072,7 @@ function FloatingNav() {
           <button
             aria-label="Menü öffnen"
             onClick={() => setOpen(true)}
-            className="grid h-10 w-10 place-items-center rounded-full border border-foreground/10"
+            className="grid h-9 w-9 place-items-center rounded-full border border-foreground/10"
           >
             <span className="flex flex-col gap-1">
               <span className="block h-0.5 w-4 bg-foreground/80" />
