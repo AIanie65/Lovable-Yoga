@@ -918,10 +918,12 @@ function Index() {
             target="_blank"
             rel="noreferrer"
             className="group relative overflow-hidden rounded-3xl p-8 text-primary-foreground"
-            style={{
-              background: "linear-gradient(160deg, oklch(0.7 0.15 155), oklch(0.55 0.14 155))",
-            }}
+            style={{ background: "var(--gradient-warm)" }}
           >
+            <span
+              aria-hidden
+              className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-white/[0.08] blur-2xl"
+            />
             <MessageCircle className="h-6 w-6 opacity-90" />
             <h3 className="mt-6 font-serif text-3xl leading-tight">WhatsApp-Kanal</h3>
             <p className="mt-2 text-sm text-primary-foreground/85">
