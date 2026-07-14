@@ -216,55 +216,93 @@ function MantraControl({ compact = false }: { compact?: boolean }) {
 
 // ---------- Mini-Guide für neue Besucher:innen ----------
 
-const guideQuestions = [
-  "Ich bin Anfänger:in",
-  "Was muss ich mitbringen?",
-  "Wie buche ich?",
-  "Zahlt meine Krankenkasse?",
+type GuideAnswers = {
+  experience?: "new" | "some" | "regular";
+  intensity?: "gentle" | "balanced" | "active";
+  goal?: "calm" | "mobility" | "strength" | "pregnancy";
+};
+
+const guideSteps = [
+  {
+    key: "experience" as const,
+    eyebrow: "Frage 1 von 3",
+    question: "Wie vertraut bist du mit Yoga?",
+    options: [
+      { value: "new", label: "Ganz neu", detail: "Ich möchte sicher einsteigen" },
+      { value: "some", label: "Schon probiert", detail: "Ein paar Stunden kenne ich" },
+      { value: "regular", label: "Regelmäßig", detail: "Ich habe eine eigene Praxis" },
+    ],
+  },
+  {
+    key: "intensity" as const,
+    eyebrow: "Frage 2 von 3",
+    question: "Wie möchtest du dich heute bewegen?",
+    options: [
+      { value: "gentle", label: "Sanft & ruhig", detail: "Loslassen und entschleunigen" },
+      { value: "balanced", label: "Ausgewogen", detail: "Bewegen, atmen, ankommen" },
+      { value: "active", label: "Aktiv & kraftvoll", detail: "Wärme und Energie spüren" },
+    ],
+  },
+  {
+    key: "goal" as const,
+    eyebrow: "Frage 3 von 3",
+    question: "Was wünschst du dir gerade am meisten?",
+    options: [
+      { value: "calm", label: "Mehr Ruhe", detail: "Kopf und Nervensystem entlasten" },
+      { value: "mobility", label: "Mehr Beweglichkeit", detail: "Den Körper wieder freier spüren" },
+      { value: "strength", label: "Mehr Kraft", detail: "Stabilität und Energie aufbauen" },
+      { value: "pregnancy", label: "Schwangerschaft", detail: "Sicher und begleitet üben" },
+    ],
+  },
 ];
 
-function answerGuideQuestion(question: string) {
-  const value = question.toLocaleLowerCase("de");
-
-  if (/anf[aä]ng|neu|schnupper|erstes mal/.test(value)) {
-    return "Du brauchst keine Vorerfahrung. Such dir im Stundenplan eine sanfte Stunde oder einen Anfänger:innen-Kurs aus. Wenn du unsicher bist, schreib uns kurz – wir helfen dir gern bei der Auswahl.";
+function getCourseRecommendation(answers: Required<GuideAnswers>) {
+  if (answers.goal === "pregnancy") {
+    return {
+      title: "Schwangerschaftsyoga",
+      text: "Eine speziell begleitete Praxis für diese besondere Zeit. Bitte prüfe vorab den aktuellen Kurszeitraum und freie Plätze im Stundenplan.",
+    };
   }
-  if (/mitbringen|matte|kleidung|anziehen|ausr[uü]stung/.test(value)) {
-    return "Bequeme Kleidung reicht. Matten und Hilfsmittel sind im Studio vorhanden, Getränke stehen ebenfalls bereit. Komm am besten etwa 10 bis 15 Minuten vor Beginn an.";
+  if (answers.goal === "calm") {
+    return {
+      title: answers.intensity === "active" ? "Slow Flow & Entspannung" : "Yin Yoga & Meditation",
+      text: "Ruhige Bewegungen, längeres Verweilen und bewusster Atem helfen dir, aus dem Alltag auszusteigen und wieder bei dir anzukommen.",
+    };
   }
-  if (/buch|anmeld|reserv|platz/.test(value)) {
-    return "Du buchst direkt über bSport. Im Stundenplan siehst du aktuelle Termine und freie Plätze; wähle dort einfach deine gewünschte Stunde aus.";
+  if (answers.goal === "mobility") {
+    return {
+      title: answers.intensity === "gentle" ? "Yin Yoga" : "Hatha Yoga",
+      text: "Diese Richtung verbindet achtsames Dehnen mit stabiler Ausrichtung. Du kannst Beweglichkeit entwickeln, ohne dich unter Leistungsdruck zu setzen.",
+    };
   }
-  if (/krankenkasse|kasse|zuschuss|pr[aä]vention/.test(value)) {
-    return "Die YogaLounge bietet zertifizierte Präventionskurse an. Ob und in welcher Höhe deine Krankenkasse unterstützt, hängt von deinem Tarif und dem gewählten Kurs ab. Frag uns oder deine Kasse vor der Buchung kurz danach.";
+  if (answers.intensity === "active" || answers.goal === "strength") {
+    return {
+      title: answers.experience === "new" ? "Hatha Yoga für Anfänger:innen" : "Vinyasa Flow",
+      text:
+        answers.experience === "new"
+          ? "Ein klar angeleiteter Einstieg, der Kraft und Stabilität aufbaut und dir genug Zeit für eine sichere Ausrichtung lässt."
+          : "Eine fließende, kräftigende Praxis, die Bewegung und Atem verbindet und neue Energie entstehen lässt.",
+    };
   }
-  if (/preis|kost|karte|abo|zahlen/.test(value)) {
-    return "Die aktuellen Preise, Karten und Angebote findest du direkt bei bSport. So erhältst du immer den gültigen Stand und kannst anschließend sofort buchen.";
-  }
-  if (/heute|wann|uhr|kursplan|stundenplan|termin/.test(value)) {
-    return "Der eingebundene bSport-Stundenplan zeigt dir live alle aktuellen Termine und freien Plätze. Nutze unten den Button „Zum Live-Stundenplan“.";
-  }
-  if (/anfahrt|adresse|park|bahn|fahrrad|wo/.test(value)) {
-    return "Du findest die YogaLounge in der Neuwerkstraße 31 in Erfurt. Parkmöglichkeiten gibt es in der Nähe; Fahrräder können sicher im Innenhof abgestellt werden.";
-  }
-  if (/kontakt|mail|telefon|whatsapp|erreich/.test(value)) {
-    return `Du erreichst uns per E-Mail an ${EMAIL} oder über den WhatsApp-Kanal. Für eine persönliche Kursberatung kannst du uns dort direkt schreiben.`;
-  }
-
-  return "Dazu habe ich noch keine verlässliche Antwort hinterlegt. Schreib uns bitte kurz per WhatsApp oder E-Mail – dann bekommst du eine persönliche Antwort aus der YogaLounge.";
+  return {
+    title: answers.experience === "new" ? "Yoga für Anfänger:innen" : "Hatha Yoga",
+    text: "Eine ausgewogene Praxis mit Bewegung, Atem und Ruhe. Sie gibt dir Orientierung und lässt gleichzeitig Raum für dein eigenes Tempo.",
+  };
 }
 
 function NewHereGuide() {
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState(
-    "Hallo, schön, dass du da bist. Was möchtest du vor deinem ersten Besuch wissen?",
-  );
+  const [answers, setAnswers] = useState<GuideAnswers>({});
+  const stepIndex = answers.experience ? (answers.intensity ? (answers.goal ? 3 : 2) : 1) : 0;
+  const recommendation =
+    stepIndex === 3 ? getCourseRecommendation(answers as Required<GuideAnswers>) : null;
 
-  const ask = (value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed) return;
-    setQuestion("");
-    setAnswer(answerGuideQuestion(trimmed));
+  const choose = (key: keyof GuideAnswers, value: string) => {
+    setAnswers((current) => ({ ...current, [key]: value }));
+  };
+
+  const goBack = () => {
+    if (stepIndex === 2) setAnswers({ experience: answers.experience });
+    if (stepIndex === 1) setAnswers({});
   };
 
   return (
@@ -277,73 +315,99 @@ function NewHereGuide() {
             </span>
             <div>
               <p className="font-serif text-xl italic">Neu hier?</p>
-              <p className="text-xs text-primary-foreground/65">Frag den YogaLounge-Guide</p>
+              <p className="text-xs text-primary-foreground/65">Finde deinen passenden Einstieg</p>
             </div>
           </div>
           <p className="mt-6 text-sm leading-relaxed text-primary-foreground/75">
-            Antworten aus unseren Studio-Informationen. Aktuelle Termine und Preise kommen direkt
-            von bSport.
+            Drei kurze Fragen geben dir eine ehrliche Orientierung. Aktuelle Termine, Preise und
+            freie Plätze kommen anschließend direkt von bSport.
           </p>
           <p className="mt-4 text-[11px] leading-relaxed text-primary-foreground/50">
-            Deine Frage bleibt in deinem Browser und wird nicht gespeichert.
+            Deine Auswahl bleibt in deinem Browser und wird nicht gespeichert.
           </p>
         </div>
 
         <div className="bg-black/[0.08] p-7 md:p-8">
-          <div
-            aria-live="polite"
-            className="min-h-24 rounded-2xl bg-white/[0.09] p-5 text-sm leading-relaxed"
-          >
-            {answer}
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {guideQuestions.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => ask(item)}
-                className="rounded-full border border-white/15 bg-white/[0.07] px-3 py-2 text-xs transition hover:bg-white/[0.14]"
+          {recommendation ? (
+            <div aria-live="polite">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-primary-foreground/55">
+                Deine Empfehlung
+              </p>
+              <div className="mt-3 rounded-2xl bg-white/[0.1] p-5">
+                <h3 className="font-serif text-3xl italic">{recommendation.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-primary-foreground/78">
+                  {recommendation.text}
+                </p>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <a
+                  href="#stundenplan"
+                  className="inline-flex items-center gap-2 rounded-full bg-background px-5 py-3 text-sm font-medium text-foreground"
+                >
+                  Passende Termine ansehen <ArrowRight className="h-4 w-4" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setAnswers({})}
+                  className="rounded-full border border-white/15 px-4 py-3 text-sm"
+                >
+                  Neu starten
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div
+                className="flex items-center gap-2"
+                aria-label={`Schritt ${stepIndex + 1} von 3`}
               >
-                {item}
-              </button>
-            ))}
-          </div>
+                {[0, 1, 2].map((item) => (
+                  <span
+                    key={item}
+                    className={`h-1.5 flex-1 rounded-full ${item <= stepIndex ? "bg-white/75" : "bg-white/15"}`}
+                  />
+                ))}
+              </div>
+              <p className="mt-5 text-[11px] uppercase tracking-[0.22em] text-primary-foreground/55">
+                {guideSteps[stepIndex].eyebrow}
+              </p>
+              <h3 className="mt-2 font-serif text-2xl italic">{guideSteps[stepIndex].question}</h3>
+              <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                {guideSteps[stepIndex].options.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => choose(guideSteps[stepIndex].key, option.value)}
+                    className="rounded-2xl border border-white/15 bg-white/[0.07] p-4 text-left transition hover:-translate-y-0.5 hover:bg-white/[0.14]"
+                  >
+                    <span className="block text-sm font-medium">{option.label}</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-primary-foreground/58">
+                      {option.detail}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {stepIndex > 0 && (
+                <button
+                  type="button"
+                  onClick={goBack}
+                  className="mt-4 text-xs text-primary-foreground/60 underline decoration-white/25 underline-offset-4"
+                >
+                  Zurück zur vorherigen Frage
+                </button>
+              )}
+            </div>
+          )}
 
-          <form
-            className="mt-4 flex gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              ask(question);
-            }}
-          >
-            <input
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              placeholder="Deine Frage …"
-              aria-label="Frage an den YogaLounge-Guide"
-              className="min-w-0 flex-1 rounded-full border border-white/15 bg-white/10 px-4 py-3 text-sm text-white outline-none placeholder:text-white/45 focus:border-white/35"
-            />
-            <button
-              type="submit"
-              aria-label="Frage stellen"
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-background text-foreground transition hover:scale-105"
-            >
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </form>
-
-          <div className="mt-4 flex flex-wrap gap-3 text-xs">
-            <a href="#stundenplan" className="underline decoration-white/30 underline-offset-4">
-              Zum Live-Stundenplan
-            </a>
+          <div className="mt-5 flex flex-wrap gap-3 text-xs text-primary-foreground/65">
+            <span>Unsicher?</span>
             <a
               href={WHATSAPP_LINK}
               target="_blank"
               rel="noreferrer"
               className="underline decoration-white/30 underline-offset-4"
             >
-              Persönlich über WhatsApp
+              Persönlich über WhatsApp fragen
             </a>
           </div>
         </div>
